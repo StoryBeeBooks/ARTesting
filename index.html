@@ -3,39 +3,67 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1, maximum-scale=1">
-  <title>Italian Chef Storefront – WebAR Geolocation Demo</title>
+  <title>Italian Chef Storefront (Tap to Start)</title>
   <style>
-    body, html { margin:0; padding:0; background:#000; }
-    .hud { position: fixed; top: 10px; left: 10px; right: 10px; color: #fff; font-family: system-ui, sans-serif; z-index: 10; }
-    .hud p { margin: 0.25rem 0; }
-    .badge { background:#111; border:1px solid #333; padding:8px 12px; border-radius:10px; display:inline-block; }
+    html, body { margin:0; padding:0; background:#000; height:100%; }
+    #gate { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+             background: radial-gradient( circle at 20% 20%, #111 0%, #000 60% ); color:#fff; font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; }
+    #gate h1 { margin:0; font-size:22px; }
+    .pill { border:1px solid #333; background:#0b57d0; color:#fff; padding:12px 18px; border-radius:999px; font-weight:600; }
+    .note { max-width:560px; text-align:center; color:#cfcfcf; font-size:14px; line-height:1.4; }
+    #sceneWrap { display:none; height:100%; }
   </style>
-  <!-- A-Frame & AR.js (location-based) -->
-  <script src="https://unpkg.com/aframe@1.5.0/dist/aframe.min.js"></script>
-  <script src="https://unpkg.com/ar.js@3.4.5/aframe/build/aframe-ar.js"></script>
+  <script>
+    async function startAR() {
+      try {
+        // Camera
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+        // Motion/Orientation (iOS)
+        if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          try { await DeviceOrientationEvent.requestPermission(); } catch (e) { console.log(e); }
+        }
+        if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') {
+          try { await DeviceMotionEvent.requestPermission(); } catch (e) { console.log(e); }
+        }
+        // Geolocation (triggers prompt)
+        if (navigator.geolocation) {
+          await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+          });
+        }
+        document.getElementById('gate').style.display = 'none';
+        document.getElementById('sceneWrap').style.display = 'block';
+      } catch (err) {
+        alert('Unable to start AR: ' + err.message + '\nCheck Camera, Location & Motion permissions in Settings.');
+      }
+    }
+  </script>
 </head>
 <body>
-  <div class="hud badge">
-    <p><strong>Italian Chef Storefront</strong></p>
-    <p>Geolocated AR – at storefront (43.625729, -79.477313)</p>
-    <p>Allow <em>camera</em> and <em>location</em> permissions.</p>
+  <div id="gate">
+    <h1>Italian Chef – WebAR</h1>
+    <div class="note">
+      <p>Tap <b>Start AR</b>, then allow <b>Camera</b>, <b>Location</b>, and (on iPhone) <b>Motion</b>.</p>
+      <p>If needed: Settings → Privacy &amp; Security → Location Services → <b>Safari Websites</b> → While Using + Precise.</p>
+      <p>Go to <b>43.625729, -79.477313</b> to see the Chef.</p>
+    </div>
+    <button class="pill" onclick="startAR()">Start AR</button>
   </div>
 
-  <a-scene
-      vr-mode-ui="enabled: false"
-      renderer="logarithmicDepthBuffer: true; antialias: true;"
-      embedded
-      arjs="sourceType: camera; videoTexture: true; debugUIEnabled: false;">
-      
+  <div id="sceneWrap">
+    <script src="https://unpkg.com/aframe@1.5.0/dist/aframe.min.js"></script>
+    <script src="https://unpkg.com/ar.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+    <a-scene vr-mode-ui="enabled: false" renderer="logarithmicDepthBuffer: true; antialias: true;" embedded arjs="sourceType: camera; videoTexture: true; debugUIEnabled: false;">
       <a-entity light="type: ambient; color: #BBB"></a-entity>
       <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="0 1 0"></a-entity>
 
-      <a-entity gps-entity-place="latitude: 43.625729; longitude: -79.477313;"
-                gltf-model="ItalianChef2.glb"
-                scale="2 2 2"
-                rotation="0 180 0"></a-entity>
+      <a-entity gps-entity-place="latitude: 43.625729; longitude: -79.477313;" gltf-model="ItalianChef2.glb" scale="2 2 2" rotation="0 180 0"></a-entity>
 
       <a-camera gps-camera rotation-reader></a-camera>
-  </a-scene>
+    </a-scene>
+  </div>
 </body>
 </html>
