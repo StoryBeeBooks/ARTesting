@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1, maximum-scale=1">
+  <title>Italian Chef Storefront – WebAR Geolocation Demo</title>
+  <style>
+    body, html { margin:0; padding:0; background:#000; }
+    .hud { position: fixed; top: 10px; left: 10px; right: 10px; color: #fff; font-family: system-ui, sans-serif; z-index: 10; }
+    .hud p { margin: 0.25rem 0; }
+    .badge { background:#111; border:1px solid #333; padding:8px 12px; border-radius:10px; display:inline-block; }
+  </style>
+  <!-- A-Frame & AR.js (location-based) -->
+  <script src="https://unpkg.com/aframe@1.5.0/dist/aframe.min.js"></script>
+  <script src="https://unpkg.com/ar.js@3.4.5/aframe/build/aframe-ar.js"></script>
+</head>
+<body>
+  <div class="hud badge">
+    <p><strong>Italian Chef Storefront</strong></p>
+    <p>Geolocated AR – at storefront (43.625729, -79.477313)</p>
+    <p>Allow <em>camera</em> and <em>location</em> permissions.</p>
+  </div>
+
+  <a-scene
+      vr-mode-ui="enabled: false"
+      renderer="logarithmicDepthBuffer: true; antialias: true;"
+      embedded
+      arjs="sourceType: camera; videoTexture: true; debugUIEnabled: false;">
+      
+      <a-entity light="type: ambient; color: #BBB"></a-entity>
+      <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="0 1 0"></a-entity>
+
+      <a-entity gps-entity-place="latitude: 43.625729; longitude: -79.477313;"
+                gltf-model="ItalianChef2.glb"
+                scale="2 2 2"
+                rotation="0 180 0"></a-entity>
+
+      <a-camera gps-camera rotation-reader></a-camera>
+  </a-scene>
+</body>
+</html>
