@@ -6,29 +6,35 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Italian Chef – WebAR (Geolocation, Debug)</title>
+
   <style>
     html, body { margin:0; padding:0; height:100%; background:#000; }
-    #gate { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; background:#000; color:#fff; font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; z-index: 10; }
+    #gate { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+            background:#000; color:#fff; font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; z-index: 10; }
     .btn { background:#0b57d0; border:none; color:#fff; padding:12px 18px; font-weight:600; border-radius:999px; }
     .note { color:#cfcfcf; font-size:14px; max-width:560px; text-align:center; line-height:1.45; }
     #hud { position: fixed; top: 8px; left: 8px; right: 8px; color: #fff; font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; z-index: 9; }
     #hud .panel { background: rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.15); padding:8px 10px; border-radius:10px; font-size: 12px; }
     a-scene { position: fixed !important; inset: 0 !important; }
   </style>
+
+  <!-- A-Frame & AR.js (reliable CDNs) -->
   <script src="https://unpkg.com/aframe@1.5.0/dist/aframe.min.js"></script>
   <script src="https://rawcdn.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
+  <!-- Permission / start gate -->
   <div id="gate">
     <h2>Italian Chef – WebAR</h2>
     <div class="note">
-      <p>This needs your <b>Camera</b>, <b>Location</b>, and (on iPhone) <b>Motion</b> access.</p>
-      <p>iPhone: Settings → Privacy → Location Services → <b>Safari Websites</b> → While Using + Precise.</p>
+      <p>This needs your <b>Camera</b>, <b>Location</b>, and (on iPhone) <b>Motion/Orientation</b> access.</p>
+      <p>iPhone: Settings → Privacy &amp; Security → Location Services → <b>Safari Websites</b> → <b>While Using</b> + <b>Precise</b>.</p>
       <p>Stand near <b>43.625729, -79.477313</b>, then tap Start.</p>
     </div>
     <button class="btn" onclick="startAR()">Start AR</button>
   </div>
 
+  <!-- Debug HUD (shows your live GPS + distance to target) -->
   <div id="hud" style="display:none">
     <div class="panel">
       <div id="status">Starting…</div>
@@ -37,25 +43,33 @@
     </div>
   </div>
 
+  <!-- AR scene -->
   <a-scene id="scene" embedded vr-mode-ui="enabled: false"
            renderer="alpha: true; antialias: true; precision: mediump;"
            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;">
-      
+
+      <!-- Preload model -->
       <a-assets>
+        <!-- Ensure this file exists in the repo root -->
         <a-asset-item id="chef" src="ItalianChef2.glb"></a-asset-item>
       </a-assets>
-      
+
+      <!-- Lights -->
       <a-entity light="type: ambient; color: #BBB"></a-entity>
       <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="0 1 0"></a-entity>
 
-      <a-entity id="model" gps-entity-place="latitude: 43.625729; longitude: -79.477313;"
-                gltf-model="#chef" scale="2 2 2" rotation="0 180 0"></a-entity>
+      <!-- Geolocated model -->
+      <a-entity id="model"
+                gps-entity-place="latitude: 43.625729; longitude: -79.477313;"
+                gltf-model="#chef"
+                scale="2 2 2"
+                rotation="0 180 0"></a-entity>
 
       <a-camera gps-camera rotation-reader></a-camera>
   </a-scene>
 
   <script>
-    const target = { lat: 43.625729, lon: -79.477313 };
+    // Haversine distance helper
     const toRad = d => d * Math.PI / 180;
     function haversine(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -67,34 +81,50 @@
     }
 
     async function startAR() {
+      // 1) Camera
       try {
         if (navigator.mediaDevices?.getUserMedia) {
           await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         }
       } catch(e) { console.log('Camera perm error', e); }
+
+      // 2) Motion/Orientation (iOS)
       try {
         if (window.DeviceOrientationEvent?.requestPermission) await DeviceOrientationEvent.requestPermission();
         if (window.DeviceMotionEvent?.requestPermission) await DeviceMotionEvent.requestPermission();
       } catch(e) { console.log('Motion perm error', e); }
+
+      // 3) Geolocation (triggers Location prompt)
       try {
         if (navigator.geolocation) {
-          await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }));
+          await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(
+            res, rej, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+          ));
         }
       } catch(e) { console.log('Geo perm error', e); }
+
+      // Show AR + HUD
       document.getElementById('gate').style.display = 'none';
       document.getElementById('hud').style.display = 'block';
       document.getElementById('status').textContent = 'Camera & Location initialized.';
     }
 
+    // Live GPS updates + distance
+    const target = { lat: 43.625729, lon: -79.477313 };
     window.addEventListener('gps-camera-update-position', e => {
-      const pos = e.detail.position;
-      const acc = e.detail.accuracy || '—';
-      document.getElementById('coords').textContent = `Lat: ${pos.latitude?.toFixed(6)}, Lon: ${pos.longitude?.toFixed(6)}, Acc: ${acc}m`;
-      const d = haversine(pos.latitude, pos.longitude, target.lat, target.lon);
-      document.getElementById('distance').textContent = 'Distance to target: ' + Math.round(d) + ' m';
-      document.getElementById('status').textContent = (d < 80) ? 'Near target — model should be visible.' : 'Far from target — move closer.';
+      const pos = e.detail.position || {};
+      const acc = e.detail.accuracy ?? '—';
+      if (pos.latitude && pos.longitude) {
+        document.getElementById('coords').textContent =
+          `Lat: ${pos.latitude.toFixed(6)}, Lon: ${pos.longitude.toFixed(6)}, Acc: ${acc}m`;
+        const d = haversine(pos.latitude, pos.longitude, target.lat, target.lon);
+        document.getElementById('distance').textContent = 'Distance to target: ' + Math.round(d) + ' m';
+        document.getElementById('status').textContent =
+          (d < 80) ? 'Near target — model should be visible.' : 'Far from target — move closer.';
+      }
     });
 
+    // Camera error hint
     document.addEventListener('arjs-video-error', () => {
       alert('Could not start the camera. Refresh and allow Camera permission, or try Safari/Chrome on mobile.');
     });
